@@ -183,15 +183,64 @@
     margin-bottom: 40px;
 }
 
-        /* PRINT */
-        @media print {
-            @page { margin: 0; size: A4; }
-            body { background: white; overflow: visible !important; margin: 0; padding: 0; }
-            .sidebar { display: none !important; }
-            .main-content { padding: 0 !important; margin: 0 !important; overflow: visible !important; display: block !important; }
-            #capture-area { box-shadow: none !important; margin: 0 !important; width: 210mm !important; min-height: 296mm !important; padding: 2cm !important; border: none !important; page-break-after: avoid; }
-            ::-webkit-scrollbar { display: none; }
-        }
+
+/* PRINT */
+@media print {
+    @page { margin: 0; size: A4; }
+    body { 
+        background: white; 
+        overflow: visible !important; 
+        margin: 0; 
+        padding: 0; 
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact;         
+    }
+    .sidebar { display: none !important; }
+    .main-content { padding: 0 !important; margin: 0 !important; overflow: visible !important; display: block !important; }
+    
+    /* Beholder arket i full bredde */
+    #capture-area { 
+        box-shadow: none !important; 
+        margin: 0 !important; 
+        width: 210mm !important; 
+        min-height: 296mm !important; 
+        padding: 2cm !important; 
+        border: none !important; 
+        page-break-after: avoid; 
+        box-sizing: border-box !important;
+    }
+    ::-webkit-scrollbar { display: none; }
+    
+    /* --- HER ER FIXEN: Vi fjerner center/gap og tvinger nettleseren til å bruke SKJERM-oppsettet ditt --- */
+    .stavekryss-container {
+        display: flex !important;
+        width: 100% !important;
+        position: relative !important;
+        /* Vi fjerner justify-content og gap, slik at den bruker det du har definert for skjerm */
+    }
+
+    .stavekryss-column {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .stavekryss-item {
+        display: flex !important;
+        align-items: center !important;
+        page-break-inside: avoid !important;
+    }
+
+    /* Sikrer at SVG-en ligger som et perfekt teppe over containeren */
+    #fasit-lines { 
+        display: block !important; 
+        opacity: 1 !important; 
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+}
     </style>
 </head>
 <body>
@@ -318,11 +367,11 @@ Tips: Bruk bindestrek for å låse delingen manuelt (f.eks. re-ve-enker)."></tex
 
 <div class="main-content">
     <div id="placeholder-image" style="display: flex; justify-content: center; align-items: center; width: 100%; height: 80vh;">
-        <img src="stavelser.png" alt="Velkomstbilde" style="max-width: 400px; opacity: 0.15; filter: grayscale(100%);">
+        <img src="stavelse-kryss_02.png" alt="Velkomstbilde" style="max-width: 400px; opacity: 0.15; filter: grayscale(100%);">
     </div> 
 
     <div id="capture-area">
-        <img src="stavelser.png" id="watermark" alt="Vannmerke">
+        <img src="stavelse-kryss_02.png" id="watermark" alt="Vannmerke">
         <div id="output-container"></div>
     </div>
 </div>
@@ -433,7 +482,7 @@ function generateStaveKryss(isManualClick = false) {
     // --- DEL 1: ORDVALG ---
     if (isManualClick || gjeldendeOrdListe.length === 0) {
         window.lagredeKolonner = null;
-const ordBank = {
+        const ordBank = {
     2: [
         // Suksessordene fra forrige runde
         "so-fa", "vin-ter", "som-mer", "ves-ke", "kaf-fe", "stjer-ne", "bø-ker",
@@ -543,16 +592,14 @@ let valgtAntallStavelser = parseInt(document.getElementById('select-stavelser').
         "#ff7675", "#74b9ff", "#55efc4", "#ffeaa7", "#a29bfe"
     ];
 
-const visFasit = document.getElementById('toggle-fasit').checked;
+    const visFasit = document.getElementById('toggle-fasit').checked;
 
-    // Vi gjør output-containeren 'position: relative' så SVG-en kan legge seg perfekt på topp
     let html = `
         <h1 style="text-align: center; margin-top: 0; margin-bottom: 10px; font-family: sans-serif; letter-spacing: 2px;">STAVELSE-KRYSS</h1>
         <p style="text-align: center; margin-bottom: 50px; font-style: italic; font-size: 0.9em; font-family: sans-serif;">Trekk streker mellom stavelsene fra venstre til høyre for å finne ordene.</p>
         <div class="stavekryss-container" style="position: relative;">
     `;
 
-    // Legg til et SVG-element som skal holde fasitlinjene hvis fasit er på
     if (visFasit) {
         html += `<svg id="fasit-lines" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></svg>`;
     }
@@ -563,9 +610,9 @@ const visFasit = document.getElementById('toggle-fasit').checked;
             
             html += `<div class="stavekryss-item">`;
 
-            // --- PUNKT TIL VENSTRE (Inngående punkt for kolonne 2, 3, 4) ---
+            // --- ENDRET: FORBEDRET STRUKTUR SOM LÅSER PRIKKER OG TEKST I REKKEFØLGE ---
+            // Punkt til venstre for teksten (inngående)
             if (kolonneIndeks > 0) {
-                // Vi gir punktet ID basert på ordet det tilhører og kolonnen
                 let dotIdVenstre = `dot-in-${item.id}-${kolonneIndeks}`;
                 html += `<span id="${dotIdVenstre}" class="stavekryss-dot"></span>`;
             }
@@ -573,13 +620,11 @@ const visFasit = document.getElementById('toggle-fasit').checked;
             const isUpper = document.getElementById('toggle-upper').checked;
             let tekstVisning = isUpper ? item.tekst.toUpperCase() : item.tekst;
             
-            // Selve teksten farges hvis fasit er på
             let stilTekst = visFasit ? `color: ${fasitFarger[item.id % fasitFarger.length]}; font-weight: bold;` : '';
-            html += `<span style="min-width: 60px; text-align: center; display: inline-block; ${stilTekst}">${tekstVisning}</span>`;
+            html += `<span class="stavekryss-text-node" style="min-width: 60px; text-align: center; display: inline-block; ${stilTekst}">${tekstVisning}</span>`;
 
-            // --- PUNKT TIL HØYRE (Utgående punkt for kolonne 1, 2, 3) ---
+            // Punkt til høyre for teksten (utgående)
             if (kolonneIndeks < aktuelleStavelser - 1) {
-                // Vi gir punktet ID basert på ordet det tilhører og kolonnen
                 let dotIdHøyre = `dot-out-${item.id}-${kolonneIndeks}`;
                 html += `<span id="${dotIdHøyre}" class="stavekryss-dot"></span>`;
             }
@@ -603,13 +648,10 @@ const visFasit = document.getElementById('toggle-fasit').checked;
     const watermark = document.getElementById('watermark');
     if (watermark) watermark.style.display = "none";
 
-    // --- DEL 3: TEGNE FASITSTREKER ---
-    // Siden elementene må være rendret i nettleseren før vi kan finne posisjonene deres,
-    // kjører vi denne koden rett etter at innerHTML er satt.
     if (visFasit) {
         setTimeout(() => {
             tegnFasitLinjer(aktuelleStavelser, kolonner.length, fasitFarger);
-        }, 50); // En ørliten forsinkelse sikrer at målene blir 100% nøyaktige
+        }, 50);
     }
 }
 
@@ -621,36 +663,61 @@ function tegnFasitLinjer(antallKolonner, antallRader, farger) {
     const containerRect = container.getBoundingClientRect();
     let linjeHTML = "";
 
-    // Vi går igjennom ord for ord (ID for ID) for å tegne en ubrutt kjede
     gjeldendeOrdListe.forEach((ord, ordId) => {
         const farge = farger[ordId % farger.length];
 
-        // Vi tegner linjer mellom kolonneparene (1-2, 2-3, 3-4)
         for (let k = 0; k < antallKolonner - 1; k++) {
-            // Finn 'dot-out' på dette ordet i denne kolonnen
-            const nodeA = container.querySelector(`#dot-out-${ordId}-${k}`);
-            // Finn 'dot-in' på dette ordet i NESTE kolonne
-            const nodeB = container.querySelector(`#dot-in-${ordId}-${k + 1}`);
+            const prikkUt = container.querySelector(`#dot-out-${ordId}-${k}`);
+            const prikkInn = container.querySelector(`#dot-in-${ordId}-${k + 1}`);
 
-            if (nodeA && nodeB) {
-                const rectA = nodeA.getBoundingClientRect();
-                const rectB = nodeB.getBoundingClientRect();
+            if (prikkUt && prikkInn) {
+                const rectA = prikkUt.getBoundingClientRect();
+                const rectB = prikkInn.getBoundingClientRect();
 
-                // Finn senterkoordinatene til selve PUNKTENE relativt til container-boksen
-                const x1 = (rectA.left + rectA.width / 2) - containerRect.left;
-                const y1 = (rectA.top + rectA.height / 2) - containerRect.top;
-                const x2 = (rectB.left + rectB.width / 2) - containerRect.left;
-                const y2 = (rectB.top + rectB.height / 2) - containerRect.top;
+                // Regner ut posisjon i prosent (%) i stedet for piksler (px)
+                const x1 = ((rectA.left + rectA.width / 2) - containerRect.left) / containerRect.width * 100;
+                const y1 = ((rectA.top + rectA.height / 2) - containerRect.top) / containerRect.height * 100;
+                const x2 = ((rectB.left + rectB.width / 2) - containerRect.left) / containerRect.width * 100;
+                const y2 = ((rectB.top + rectB.height / 2) - containerRect.top) / containerRect.height * 100;
 
-                // Generer en SVG-linje. Vi bruker en litt tykkere, solid linje her
-                // siden den ikke lenger kutter over bokstavene.
-                linjeHTML += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${farge}" stroke-width="2.5" opacity="0.7" stroke-linecap="round" />`;
+                linjeHTML += `<line x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%" stroke="${farge}" stroke-width="2.5" opacity="0.75" stroke-linecap="round" />`;
             }
         }
     });
 
     svg.innerHTML = linjeHTML;
 }
+
+
+// Tvinger appen til å tegne fasitstrekene på nytt når siden formateres om til utskrift
+window.onbeforeprint = function() {
+    const visFasit = document.getElementById('toggle-fasit').checked;
+    if (visFasit) {
+        let aktuelleStavelser = parseInt(document.getElementById('select-stavelser').value);
+        const input = document.getElementById('text-input').value.trim();
+        if (input !== "" && gjeldendeOrdListe.length > 0) {
+            aktuelleStavelser = splitWordIntoSyllables(gjeldendeOrdListe[0]).length;
+        }
+        
+        const fasitFarger = [
+            "#e74c3c", "#3498db", "#2ecc71", "#f1c40f", "#9b59b6", 
+            "#e67e22", "#1abc9c", "#e84393", "#6c5ce7", "#00b894",
+            "#ff7675", "#74b9ff", "#55efc4", "#ffeaa7", "#a29bfe"
+        ];
+        
+        // Siden vi bruker %, vil linjene automatisk strekke seg perfekt sammen med prikkene!
+        tegnFasitLinjer(aktuelleStavelser, 0, fasitFarger);
+    }
+};
+
+window.onafterprint = function() {
+    const visFasit = document.getElementById('toggle-fasit').checked;
+    if (visFasit) {
+        // Tegner linjene tilbake til skjermstørrelse igjen
+        window.onbeforeprint();
+    }
+};
+
 
 function endreRekkefolge() {
     // Sjekk at det faktisk er generert en oppgave først
